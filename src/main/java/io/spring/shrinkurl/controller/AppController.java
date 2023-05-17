@@ -1,6 +1,7 @@
 package io.spring.shrinkurl.controller;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,67 +20,73 @@ import io.spring.shrinkurl.service.ShrinkService;
 @RestController
 @EntityScan("io.spring.shrinkurl.model")
 public class AppController {
-	
+
 	@Autowired
 	private ShrinkService service;
-	
+
 	@GetMapping("/")
-	public String show() {
+	public String homePage() {
 		return "Shrink Url Service Started and Running...";
 	}
-	
+
+	@GetMapping("/list")
+	public List<Url> listAll() {
+		return this.service.getAllUrls();
+	}
+
 	@PostMapping("/shrink")
 	public ResponseEntity<?> shrinkUrl(@RequestBody Request request) {
-		
+
 		Url url = this.service.generateShortUrl(request);
-		if(url != null) {
+		if (url != null) {
 			Response response = new Response();
 			response.setOriginalUrl(request.getUrl());
 			response.setShortUrl(url.getShortUrl());
 			response.setExpDate(url.getExpirationDate());
 			return new ResponseEntity<Response>(response, HttpStatus.OK);
 		}
-		
+
 		// error response
-		ErrorResponse  errorResponse = new ErrorResponse();
-		errorResponse.setStatus("404");
-		errorResponse.setError("Internal Error");
-		return new ResponseEntity<ErrorResponse>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-		
+		Response errorResponse = new Response();
+		errorResponse.setCode(500);
+		errorResponse.setStatus("INTERNAL_SERVER_ERROR");
+		return new ResponseEntity<Response>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+
 	}
-	
+
 	@GetMapping("/{uid}")
 	public ResponseEntity<?> redirectToUrl(@PathVariable String uid) {
-		
-		if(StringUtils.isEmpty(uid)) {
-			ErrorResponse errorResponse = new ErrorResponse();
-			errorResponse.setStatus("404");
-			errorResponse.setError("Invalid UID");
-			return new ResponseEntity<ErrorResponse>(errorResponse, HttpStatus.BAD_REQUEST);
+
+		if (StringUtils.isEmpty(uid)) {
+			Response errorResponse = new Response();
+			errorResponse.setCode(400);
+			errorResponse.setStatus("BAD_REQUEST");
+			return new ResponseEntity<Response>(errorResponse, HttpStatus.BAD_REQUEST);
 		}
-		
+
 		Url url = this.service.getEncodedUrl(uid);
-		if(url == null) {
-			ErrorResponse errorResponse = new ErrorResponse();
-			errorResponse.setStatus("404");
-			errorResponse.setError("UID Not Found");
-			return new ResponseEntity<ErrorResponse>(errorResponse, HttpStatus.NOT_FOUND);
+		if (url == null) {
+			Response errorResponse = new Response();
+			errorResponse.setCode(404);
+			errorResponse.setStatus("NOT_FOUND");
+			return new ResponseEntity<Response>(errorResponse, HttpStatus.NOT_FOUND);
 		}
+
 		// check for expired uid
-		
-		if(url.getExpirationDate().isBefore(LocalDateTime.now())) {
-			ErrorResponse errorResponse = new ErrorResponse();
-			errorResponse.setStatus("200");
-			errorResponse.setError("Link Expired");
-			return new ResponseEntity<ErrorResponse>(errorResponse, HttpStatus.OK);
+
+		if (url.getExpirationDate().isBefore(LocalDateTime.now())) {
+			Response errorResponse = new Response();
+			errorResponse.setCode(410);
+			errorResponse.setStatus("GONE");
+			return new ResponseEntity<Response>(errorResponse, HttpStatus.GONE);
 		}
-		
+
 		Response response = new Response();
 		response.setOriginalUrl(url.getOriginalUrl());
 		response.setShortUrl(url.getShortUrl());
 		response.setExpDate(url.getExpirationDate());
 		return new ResponseEntity<Response>(response, HttpStatus.OK);
-		
+
 	}
-	
+
 }

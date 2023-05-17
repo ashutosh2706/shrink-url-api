@@ -2,6 +2,7 @@ package io.spring.shrinkurl.service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,11 @@ public class ShrinkServiceImpl implements ShrinkService{
 	@Override
 	public void deleteShortUrl(Url url) {
 		repo.delete(url);
-		
+	}
+	
+	@Override
+	public List<Url> getAllUrls() {
+		return repo.findAll();
 	}
 	
 	private LocalDateTime expirationDate(String givenTime, LocalDateTime creationTime) {
@@ -64,4 +69,5 @@ public class ShrinkServiceImpl implements ShrinkService{
 		}
 		return LocalDateTime.parse(givenTime);
 	}
+
 }
